@@ -7,9 +7,12 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <form id="upload-form">
-        <input type="file" name="resume" required>
-        <button type="submit">Upload Resume</button>
+    <form id="input-form">
+        <label for="skills">Enter Your Skills:</label>
+        <input type="text" name="skills" required>
+        <label for="job-title">Desired Job Title:</label>
+        <input type="text" name="job-title" required>
+        <button type="submit">Get Recommendations</button>
     </form>
     <div id="message"></div>
     <script src="frontend/script.js"></script> <!-- This is the javascript link -->
