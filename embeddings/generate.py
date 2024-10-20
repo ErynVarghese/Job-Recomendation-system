@@ -1,37 +1,33 @@
+from tenacity import retry, wait_random_exponential, stop_after_attempt
+
 import time
 import json
-import os
-from openai import OpenAI
-import asyncio
 
-# API key
-api_key = os.getenv("OPENAI_API_KEY")
-openai_client = OpenAI(api_key=api_key)
+@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(10))
+def generateEmbeddings(text, embeddings_deployment, AzureOpenAIClient):
+    
+    # Generate embeddings from the input text
+    response = AzureOpenAIClient.embeddings.create(
+        input=text,
+        model=embeddings_deployment
+    )
 
-async def generate_job_embedding(job_data, embeddings_deployment):
-    # Concatenating skills and job title
-    job_name = f"Skills - {job_data['skills']}, Job Title - {job_data['job_title']}"
+    # Parse the response into a json object
+    embeddings = json.loads(response.model_dump_json(indent=2))
 
-    if job_name:
-        job_data["jobVector"] = await generate_embeddings(job_name, embeddings_deployment)
+    # Small delay to avoid rate limiting (adjust if needed)
+    time.sleep(0.01)
 
-    return job_data
+    return embeddings["data"][0]["embedding"]
 
-async def generate_embeddings(text, embeddings_deployment):
-    # Generate embeddings from the string of text
-    try:
-        response = await asyncio.to_thread(openai_client.create_embedding,  
-                                            model=embeddings_deployment,
-                                            input=text)
+def generateJobEmbedding(job, embeddings_deployment, AzureOpenAIClient):
+    # Get the skills and experience level from the job data
+    skills = job["skills"]
+    experienceLevel = job["experience-level"]
 
+    # Combine skills and experience level for embedding
+    if skills and experienceLevel:
+        textToEmbed = f"Skills: {skills}, Experience Level: {experienceLevel}"
+        job["jobVector"] = generateEmbeddings(textToEmbed, embeddings_deployment, AzureOpenAIClient)
 
-        embeddings = response['data'][0]['embedding']  
-
-        # Avoid rate limiting
-        await asyncio.sleep(0.01)  
-
-        return embeddings
-
-    except Exception as e:
-        print(f"Error generating embeddings: {e}")
-        return None  
+    return job
