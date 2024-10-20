@@ -1,10 +1,9 @@
-
 import os
 import json
 import datetime
 from pymongo import UpdateOne
 import models.job as Jobs  #  job model 
-import indexing.indexer as Indexes  # Assuming index creation logic is here
+import indexing.indexer as Indexes  #  index creation logic 
 
 # load and vectorize local job data to MongoDB cluster
 def loadAndVectorizeLocalBlobDataToMongoDBCluster(client, data_folder, mongodb_database, batch_size, embeddings_deployment, AzureOpenAIClient, process_jobs_vector):
