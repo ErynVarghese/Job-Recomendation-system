@@ -20,14 +20,60 @@ def generateEmbeddings(text, embeddings_deployment, AzureOpenAIClient):
 
     return embeddings["data"][0]["embedding"]
 
+
 def generateJobEmbedding(job, embeddings_deployment, AzureOpenAIClient):
-    # Get the skills and experience level from the job data
-    skills = job["skills"]
-    experienceLevel = job["experience-level"]
+    # Extracting fields from the job dictionary
+    job_id = job.get("Job Id", "")
+    experience_level = job.get("Experience", "")
+    qualifications = job.get("Qualifications", "")
+    salary_range = job.get("Salary Range", "")
+    location = job.get("location", "")
+    country = job.get("Country", "")
+    latitude = job.get("latitude", "")
+    longitude = job.get("longitude", "")
+    work_type = job.get("Work Type", "")
+    company_size = job.get("Company Size", "")
+    job_posting_date = job.get("Job Posting Date", "")
+    preference = job.get("Preference", "")
+    contact_person = job.get("Contact Person", "")
+    contact = job.get("Contact", "")
+    title = job.get("Job Title", "")
+    role = job.get("Role", "")
+    job_portal = job.get("Job Portal", "")
+    description = job.get("Job Description", "")
+    benefits = job.get("Benefits", "")
+    skills = job.get("skills", "")
+    responsibilities = job.get("Responsibilities", "")
+    company = job.get("Company", "")
+    company_profile = job.get("Company Profile", "")
 
-    # Combine skills and experience level for embedding
-    if skills and experienceLevel:
-        textToEmbed = f"Skills: {skills}, Experience Level: {experienceLevel}"
-        job["jobVector"] = generateEmbeddings(textToEmbed, embeddings_deployment, AzureOpenAIClient)
-
+    # Combine all relevant fields for embedding
+    textToEmbed = f"""
+    Job Id: {job_id}
+    Job Title: {title}
+    Role: {role}
+    Description: {description}
+    Skills: {skills}
+    Experience Level: {experience_level}
+    Qualifications: {qualifications}
+    Salary Range: {salary_range}
+    Location: {location}
+    Country: {country}
+    Latitude: {latitude}
+    Longitude: {longitude}
+    Work Type: {work_type}
+    Company Size: {company_size}
+    Job Posting Date: {job_posting_date}
+    Preference: {preference}
+    Contact Person: {contact_person}
+    Contact: {contact}
+    Benefits: {benefits}
+    Responsibilities: {responsibilities}
+    Company: {company}
+    Company Profile: {company_profile}
+    """
+    
+    # Generate embeddings
+    job["jobVector"] = generateEmbeddings(textToEmbed, embeddings_deployment, AzureOpenAIClient)
+    
     return job

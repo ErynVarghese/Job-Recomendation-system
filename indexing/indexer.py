@@ -2,73 +2,86 @@ import os
 import json
 import datetime
 from pymongo import UpdateOne
-import models.job as Jobs  #  job model 
-import indexing.indexer as Indexes  #  index creation logic 
+import models.job as Jobs
+import indexing.indexer as Indexes 
+import data_fetching.StoreFromCSV 
+import embeddings.generate
 
-# load and vectorize local job data to MongoDB cluster
-def loadAndVectorizeLocalBlobDataToMongoDBCluster(client, data_folder, mongodb_database, batch_size, embeddings_deployment, AzureOpenAIClient, process_jobs_vector):
-    # Get list of files in the data folder
-    local_blobs_files = os.listdir(data_folder)
 
-    # Iterate over each file in the folder
-    for blob_file in local_blobs_files:
-        batch_number = 1
+def loadAndVectorizeJobs(client, mongodb_database, embeddings_deployment, AzureOpenAIClient, batch_size):
+    # Load jobs from CSV
+    jobs = data_fetching.StoreFromCSV.fetch_jobs_from_csv()
+    
+    
+    if not jobs:
+        print("No jobs found in the provided CSV.")
+        return
 
-        # Process only JSON files
-        if blob_file.endswith(".json"):
-            print("\n(" + str(datetime.datetime.now()) + ")  " + blob_file)
 
-            # Open the file and load its content
-            with open(os.path.join(data_folder, blob_file), 'r') as file:
-                json_data = json.load(file)
+    # Get the database and collection
+    db = client[mongodb_database]
+    collection_name = "jobs"  
+    collection = db[collection_name]
+    current_doc_idx = 0
 
-           
-            total_number_of_documents = len(json_data)
+    operations = []
+    total_number_of_documents = len(jobs)
+    batch_number = 1
 
-            if total_number_of_documents >= 0:
-                # Get the collection name from the file name 
-                collection_name = blob_file.split(".json")[0]
+    # Generate embeddings for each job
+    for job in jobs:
+        current_doc_idx += 1
 
-                # Get the database and collection
-                db = client[mongodb_database]
-                collection = db[collection_name]
-                current_doc_idx = 0
+        job = embeddings.generate.generateJobEmbedding(job, embeddings_deployment, AzureOpenAIClient)
 
-                operations = []
+         # Prepare the update operation for the document
+        operations.append(UpdateOne({"_id": job["_id"]}, {"$set": job}, upsert=True))
 
-                # Iterate over each document in the JSON data
-                for doc in json_data:
-                    current_doc_idx += 1
+        # Write to the collection in batches
+        if len(operations) == batch_size:
+            print(f"\tWriting collection {collection_name}, batch size {batch_size}, batch {batch_number}, number of documents processed so far {current_doc_idx}.")
+            collection.bulk_write(operations, ordered=False)
+            operations = []
+            batch_number += 1
 
-                    # Generate embeddings for the job data based on skills and experience level
-                    if collection_name == "jobs" and process_jobs_vector:
-                        doc = Jobs.generateJobEmbedding(doc, embeddings_deployment, AzureOpenAIClient)
+        # Print progress for every 100 documents processed
+        if current_doc_idx % 100 == 0:
+            print(f"\t{current_doc_idx} out of {total_number_of_documents} docs vectorized.")
 
-                   
-                    if current_doc_idx % 100 == 0 and process_jobs_vector:
-                        print(f"\t{current_doc_idx} out of {total_number_of_documents} docs vectorized.")
+    # Write any remaining operations to the collection
+    if operations:
+        print(f"\tWriting collection {collection_name}, batch size {batch_size}, batch {batch_number}, number of documents processed so far {current_doc_idx}.")
+        collection.bulk_write(operations, ordered=False)
 
-                    # Prepare the update operation for the document
-                    operations.append(UpdateOne({"_id": doc["_id"]}, {"$set": doc}, upsert=True))
+    print(f"(" + str(datetime.datetime.now()) + ")  " + f"Collection {collection_name}, total number of documents processed {current_doc_idx} .\n")
 
-                    # Write to the collection in batches
-                    if len(operations) == batch_size:
-                        print(f"\tWriting collection {collection_name}, batch size {batch_size}, batch {batch_number}, number of documents processed so far {current_doc_idx}.")
-                        collection.bulk_write(operations, ordered=False)
-                        operations = []
-                        batch_number += 1
+    # Create vector indexes for the collection
+    index_list = [
+        ("jobIdVectorSearchIndex", "jobIdVector"), 
+        ("jobTitleVectorSearchIndex", "jobTitleVector"),
+        ("roleVectorSearchIndex", "roleVector"),  
+        ("jobDescriptionVectorSearchIndex", "jobDescriptionVector"),
+        ("jobSkillsVectorSearchIndex", "jobSkillsVector"),
+        ("experienceLevelVectorSearchIndex", "experienceLevelVector"),
+        ("qualificationsVectorSearchIndex", "qualificationsVector"), 
+        ("salaryRangeVectorSearchIndex", "salaryRangeVector"),
+        ("locationVectorSearchIndex", "locationVector"), 
+        ("countryVectorSearchIndex", "countryVector"),  
+        ("latitudeVectorSearchIndex", "latitudeVector"),  
+        ("longitudeVectorSearchIndex", "longitudeVector"), 
+        ("workTypeVectorSearchIndex", "workTypeVector"),
+        ("companySizeVectorSearchIndex", "companySizeVector"),
+        ("jobPostingDateVectorSearchIndex", "jobPostingDateVector"), 
+        ("preferenceVectorSearchIndex", "preferenceVector"), 
+        ("contactPersonVectorSearchIndex", "contactPersonVector"),  
+        ("contactVectorSearchIndex", "contactVector"), 
+        ("benefitsVectorSearchIndex", "benefitsVector"),  
+        ("responsibilitiesVectorSearchIndex", "responsibilitiesVector"), 
+        ("companyVectorSearchIndex", "companyVector"),
+        ("companyProfileVectorSearchIndex", "companyProfileVector") 
+    ]
 
-                # Write any remaining operations to the collection
-                if len(operations) > 0:
-                    print(f"\tWriting collection {collection_name}, batch size {batch_size}, batch {batch_number}, number of documents processed so far {current_doc_idx}.")
-                    collection.bulk_write(operations, ordered=False)
-
-                print(f"({str(datetime.datetime.now())})  Collection {collection_name}, total number of documents processed {current_doc_idx}.\n")
-
-                # Create the vector indexes for the jobs collection based on the job vector (skills and experience level)
-                if process_jobs_vector and collection_name == "jobs":
-                    index_list = [("jobVectorSearchIndex", "jobVector")]  # Adjusted for the new context
-                    Indexes.createVectorIndexes(collection, index_list, db, collection_name)
+    createVectorIndexes(collection, index_list, db, collection_name)
 
 
 # Function to create vector indexes in a MongoDB collection
