@@ -9,10 +9,15 @@ load_dotenv(".env")
 
 def fetch_jobs_from_csv():
 
-    df = dd.read_csv('D:/Eryn/Downloads/job_descriptions.csv')
+    df = dd.read_csv(r'D:\Eryn\Downloads\job_descriptions.csv\job_descriptions.csv')
+
+    #debug-start
+    test_df = pd.read_csv(r'D:\Eryn\Downloads\job_descriptions.csv\job_descriptions.csv')
+    print(test_df.head())
+    #debug-end
 
     if len(df) == 0:
-        print(f"No jobs found in {'D:/Eryn/Downloads/job_descriptions.csv'}.")
+        print(f"No jobs found in {r'D:\Eryn\Downloads\job_descriptions.csv\job_descriptions.csv'}.")
         return []
 
    

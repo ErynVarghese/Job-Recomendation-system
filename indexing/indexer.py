@@ -8,7 +8,7 @@ import data_fetching.StoreFromCSV
 import embeddings.generate
 
 
-def loadAndVectorizeJobs(client, mongodb_database, embeddings_deployment, AzureOpenAIClient, batch_size):
+def loadAndVectorizeJobs(client, cosmos_db_mongodb_database, embeddings_deployment, AzureOpenAIClient, batch_size):
     # Load jobs from CSV
     jobs = data_fetching.StoreFromCSV.fetch_jobs_from_csv()
     
@@ -19,7 +19,7 @@ def loadAndVectorizeJobs(client, mongodb_database, embeddings_deployment, AzureO
 
 
     # Get the database and collection
-    db = client[mongodb_database]
+    db = client[cosmos_db_mongodb_database]
     collection_name = "jobs"  
     collection = db[collection_name]
     current_doc_idx = 0

@@ -22,7 +22,7 @@ def main():
     AzureOpenAIClient = AzureOpenAI(
             azure_endpoint = OPENAI_ENDPOINT
             , api_key = OPENAI_KEY
-            , api_version = "2023-05-01"
+            , api_version = "2024-02-01"
             , azure_deployment = EMBEDDINGS_DEPLOYMENT
     )
 
@@ -30,7 +30,7 @@ def main():
     AzureOpenAICompletionClient = AzureOpenAI(
             azure_endpoint = OPENAI_ENDPOINT
             , api_key = OPENAI_KEY
-            , api_version = "2023-05-01"
+            , api_version = "2024-02-01"
             , azure_deployment = COMPLETION_DEPLOYMENT
     )
     
